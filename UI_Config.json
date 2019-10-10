@@ -1,0 +1,106 @@
+﻿{
+	"output_file": "settings.json",
+	"PayoutInterval": {
+		"type": "slider",
+		"value": 10,
+		"min": 1,
+		"max": 15,
+		"ticks": 1,
+		"label": "Payout Every (Minutes)",
+		"tooltip": "The interval in minutes in which active viewer's receive points.",
+		"group": "Main Settings"	
+	},
+	"PayoutAmount": {
+		"type": "slider",
+		"value": 1,
+		"min": 1,
+		"max": 100,
+		"ticks": 1,
+		"label": "Payout Amount (Points)",
+		"tooltip": "The amount of points a viewer receives on every payout interval.",
+		"group": "Main Settings"	
+	},
+	"OpenReadme": {
+		"type": "button",
+		"label": "Open Readme",
+		"tooltip": "Opens the readme file.",
+		"function": "openReadme",
+		"group": "Main Settings"
+	},
+	"DecayActive": {
+		"type": "checkbox",
+		"label": "Point Decay",
+		"value": 1,
+		"tooltip": "Inactive viewers lose points after some time.",
+		"group": "Decay Settings"
+	},
+	"DecayViewerAmount": {
+		"type": "dropdown",
+		"label": "The",
+		"value": "Top 10",
+		"tooltip": "The amount of top viewers affected by the decay.",
+		"items": [
+		  "Top 5",
+		  "Top 10",
+		  "Top 25",
+		  "Top 50",
+		  "Top 100",
+		],
+		"group": "Decay Settings"
+	},
+	"DecayCooldown": {
+		"type": "slider",
+		"value": 8,
+		"min": 1,
+		"max": 25,
+		"ticks": 1,
+		"label": "Starts Losing Points After (Hours)",
+		"tooltip": "Streamtime since the last chat activity after a viewer loses points.",
+		"group": "Decay Settings"	
+	},
+	"DecayInterval": {
+		"type": "slider",
+		"value": 8,
+		"min": 1,
+		"max": 25,
+		"ticks": 1,
+		"label": "Then Loses Points Every (Hours)",
+		"tooltip": "Streamtime after which a viewers loses points again.",
+		"group": "Decay Settings"	
+	},
+	"DecayType": {
+		"type": "dropdown",
+		"label": "Decay Type",
+		"value": "Stacking",
+		"tooltip": "Fixed: a viewer loses a fixed amount on each decay.\nStacking: a viewer loses 1% more than on the last decay.",
+		"items": [
+		  "Stacking",
+		  "Fixed"
+		],
+		"group": "Decay Settings"
+	},
+	"DecayAmount": {
+		"type": "slider",
+		"value": 1,
+		"min": 1,
+		"max": 5,
+		"ticks": 1,
+		"label": "Decay Amount (%) - Fixed Mode Only",
+		"tooltip": "The amount of points a viewers loses in percent.",
+		"group": "Decay Settings"	
+	},
+    "AnnouncePayout": {
+        "type": "checkbox",
+        "label": "Announce The Point Payout In Chat",
+        "value": true,
+        "tooltip": "Sends a chatmessage about the payout.",
+        "group": "Message Settings"
+    },
+    "AnnounceDiscord": {
+        "type": "checkbox",
+        "label": "Send Score Summary To Discord On Close",
+        "value": true,
+        "tooltip": "Announces the score summary in discord after the script gets closed.",
+        "group": "Message Settings"
+    }
+}
