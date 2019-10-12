@@ -25,6 +25,15 @@
 		"label": "Open Readme",
 		"tooltip": "Opens the readme file.",
 		"function": "openReadme",
+		"wsevent": "",
+		"group": "Main Settings"
+	},
+	"Donate": {
+		"type": "button",
+		"label": "Donate",
+		"tooltip": "Opens a donation link.",
+		"function": "donate",
+		"wsevent": "",
 		"group": "Main Settings"
 	},
 	"DecayActive": {
@@ -68,7 +77,7 @@
 		"tooltip": "Streamtime after which a viewers loses points again.",
 		"group": "Decay Settings"	
 	},
-	"DecayType": {
+	"DecayFixed": {
 		"type": "dropdown",
 		"label": "Decay Type",
 		"value": "Stacking",
