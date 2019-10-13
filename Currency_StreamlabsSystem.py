@@ -103,6 +103,7 @@ class ScriptSettings():
             return
             
         #set time format
+        self.PayoutAmount = int(self.PayoutAmount)
         self.PayoutInterval = timedelta(minutes=self.PayoutInterval)
         self.DecayCooldown = timedelta(hours=self.DecayCooldown)
         self.DecayInterval = timedelta(hours=self.DecayInterval)
@@ -130,8 +131,8 @@ class DecayTracker():
         sotv = set(Parent.GetTopCurrency(settings.DecayViewerAmount).keys())
         dlKeys = set(self.data.keys())
         difA = dlKeys.difference(sotv)
-        if difA:
-            difB = sotv.difference(dlKeys)
+        difB = sotv.difference(dlKeys)
+        if difA or difB: 
             self.data.update(dict.fromkeys(difB, timedelta()))
             for e in difA:
                 del self.data[e]
@@ -180,13 +181,13 @@ def run():
             return
     
     setupLogging()
-    nextPayout = time.time() + settings.PayoutInterval - (time.time() % settings.PayoutInterval)
+    nextPayout = time.time() + settings.PayoutInterval.total_seconds() - (time.time() % settings.PayoutInterval.total_seconds())
     while Parent.IsLive():
         if stopEvent.wait(nextPayout - time.time()):
             break
         
-        nextPayout += settings.PayoutInterval
-        addPoints()
+        nextPayout += settings.PayoutInterval.total_seconds()
+        payoutPoints()
     return
 
 #write saved log info to file if the stream goes live
@@ -208,7 +209,7 @@ def setupLogging():
     return
 
 #add points for every active viewer and check session presence
-def addPoints():
+def payoutPoints():
     #add points for viewers
     viewer = getActiveUsers()
     if not viewer:
@@ -236,6 +237,8 @@ def getActiveUsers():
     viewer = set()
     
     for user in Parent.GetActiveUsers():
+        if user == Parent.GetChannelName():
+            continue
         if Parent.GetPoints(user) <= 0:
             link = "https://api.crunchprank.net/twitch/followed/{}/{}".format(Parent.GetChannelName(), user)
             result = Parent.GetRequest(link, {})
@@ -292,7 +295,7 @@ def sendDiscordInfo():
     return
     
 def addPoints(user, amount):
-    Parent.AddPoints(v, settings.PayoutAmount)
+    Parent.AddPoints(user, settings.PayoutAmount)
     scoreSummary[user] = scoreSummary.get(user, 0) + settings.PayoutAmount
     return
     
