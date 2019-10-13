@@ -13,7 +13,7 @@ ScriptName = "[Currency]"
 Website = "https://www.twitch.tv/blackoutroulette"
 Description = "Gives every viewer a custom amount of currency every x seconds."
 Creator = "BlackoutRoulette"
-Version = "1.3.2.2"
+Version = "1.0.0.0"
 
 #returns script folder path + filename
 def getPath(filename):
@@ -30,34 +30,29 @@ def donate():
 def Init():
     global settings
     global stopEvent
-    global thread
     global scoreSummary
     global logActive
     global logData
     global decayLog
+    global thread
     
     logActive = False
     logData = list()
-
+    thread = None
     stopEvent = threading.Event()
     settings = ScriptSettings()
     scoreSummary = dict()
     
-    thread = threading.Thread(target=exceptionCatcher)
-    #thread.setDaemon(True)
     if settings.Valid and settings.DecayActive:
-        decayLog = FileManager("decaylog.json")
+        decayLog = DecayTracker("decaylog.json")
     return
 
 #stop thread and calculate point decay
 def Unload():
-    if thread.isAlive():
+    if thread and thread.isAlive():
         stopEvent.set()
         thread.join()
-        
-    if not scoreSummary:
-        return
-        
+
     sendDiscordInfo()     
     return 
 
@@ -75,14 +70,13 @@ def ScriptToggled(state):
         Error("Settings could not be loaded, did you hit the \"Save Settings\" button?")
         return
 
-    if state and not thread.isAlive():
+    if state and not (thread and thread.isAlive()):
+        thread = threading.Thread(target=exceptionCatcher)
         stopEvent.clear()
         thread.start()
-    elif not state and thread.isAlive():
+    elif not state and thread and thread.isAlive():
         stopEvent.set()
         thread.join()
-        thread = threading.Thread(target=exceptionCatcher)
-        #thread.setDaemon(True)
     return
     
 def Reloadsettings(jsonData):
@@ -105,21 +99,20 @@ class ScriptSettings():
             file = getPath("settings.json")
             with codecs.open(file, encoding="utf-8-sig", mode="r") as f:
                 self.__dict__ = json.load(f, encoding="utf-8")
-            
-            #set time format
-            self.PayoutInterval = timedelta(minutes=self.PayoutInterval)
-            self.DecayCooldown = timedelta(hours=self.DecayCooldown)
-            self.DecayInterval = timedelta(hours=self.DecayInterval)
-            self.DecayViewerAmount = int(filter(str.isdigit, self.DecayViewerAmount))
-            self.DecayFixed = self.DecayFixed == "Fixed"
-            self.Valid = True
-            Parent.Log(ScriptName, str(self.DecayViewerAmount))
         except:
-            pass
+            return
+            
+        #set time format
+        self.PayoutInterval = timedelta(minutes=self.PayoutInterval)
+        self.DecayCooldown = timedelta(hours=self.DecayCooldown)
+        self.DecayInterval = timedelta(hours=self.DecayInterval)
+        self.DecayViewerAmount = int(filter(str.isdigit, self.DecayViewerAmount))
+        self.DecayFixed = self.DecayFixed == "Fixed"
+        self.Valid = True
         self.PollRate = 30
         return
 
-class FileManager():
+class DecayTracker():
     def __init__(self, filename):
         self.data = dict()
         self.__path = getPath(filename)
@@ -133,6 +126,18 @@ class FileManager():
         self.data[key] = value
         return
         
+    def update(self):
+        sotv = set(Parent.GetTopCurrency(settings.DecayViewerAmount).keys())
+        dlKeys = set(self.data.keys())
+        difA = dlKeys.difference(sotv)
+        if difA:
+            difB = sotv.difference(dlKeys)
+            self.data.update(dict.fromkeys(difB, timedelta()))
+            for e in difA:
+                del self.data[e]
+            self.save()
+        return
+        
     def load(self):
         if os.path.isfile(self.__path):
             f = open(self.__path, "r")
@@ -140,8 +145,9 @@ class FileManager():
             for k,v in temp.iteritems():
                 self.data[k] = timedelta(minutes=v)
             f.close()
+            self.update()
             return
-       
+        
         dotv = Parent.GetTopCurrency(settings.DecayViewerAmount)
         for k in dotv.keys():
             dotv[k] = timedelta()
@@ -243,21 +249,13 @@ def getActiveUsers():
 def updateDecayLog(viewer):
     if not settings.DecayActive:
         return
-
-    #update local decaylog
-    sotv = set(Parent.GetTopCurrency(settings.DecayViewerAmount).keys())
-    dlKeys = set(decayLog.data.keys())
-    difA = dlKeys.difference(sotv)
-    if difA:
-        difB = sotv.difference(dlKeys)
-        decayLog.data.update(dict.fromkeys(difB, 0))
-        for e in difA:
-            del decayLog[e]
+        
+    decayLog.update()
             
     #reset or increase decay for viewers
     for k in decayLog.data.keys():
         if k in viewer:
-            decayLog[k] = 0
+            decayLog[k] = timedelta()
         else:
             checkDecay(k)
             decayLog[k] += settings.PayoutInterval
@@ -273,7 +271,7 @@ def checkDecay(user):
     decay = settings.DecayAmount
     if not settings.DecayFixed:
         percent = (decayLog[user] - settings.DecayCooldown) / settings.DecayInterval
-        decay = int((percent/100.0) * Parent.GetPoints(user))
+        decay = int((percent / 100.0) * Parent.GetPoints(user))
         
     removePoints(user, decay)
     Log("{}% decay (-{} {}) for: {}".format(percent, decay, Parent.GetCurrencyName(), Parent.GetDisplayName(user)))
@@ -282,6 +280,9 @@ def checkDecay(user):
 
 #sends a discord information at the end of the stream
 def sendDiscordInfo():
+    if not scoreSummary:
+        return
+
     msg1 = ",  ".join(": ".join((Parent.GetDisplayName(k),"+{}".format(v) if v > 0 else str(v))) for k,v in sorted(scoreSummary.iteritems(), key=lambda (k,v): (-v,k)))
     msg = "Heutige Punkteverteilung:\n{}".format(msg1);
     Log(msg)
