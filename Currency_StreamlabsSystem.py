@@ -10,9 +10,9 @@ from datetime import timedelta
 #   [Required] Script Information
 #---------------------------
 ScriptName = "[Currency]"
-Website = "https://www.twitch.tv/blackoutroulette"
-Description = "Gives every viewer a custom amount of currency every x seconds."
-Creator = "BlackoutRoulette"
+Website = "https://github.com/erickraemer/currency"
+Description = "An enhancement script for the streamlabs loyality system which rewards your viewers with points for watching your stream."
+Creator = "Eric krämer"
 Version = "1.0.0.0"
 
 #returns script folder path + filename
@@ -23,7 +23,8 @@ def openReadme():
     os.startfile(getPath("readme.txt"))
     return
     
-def donate():
+def openWebsite():
+    os.system("start \"\" {}".format(Website))
     return
 
 #set variables
@@ -170,7 +171,7 @@ def exceptionCatcher():
     try:
         run()
     except BaseException as ex:
-        Parent.Log(ScriptName, str(traceback.format_exc()))
+        Log(ScriptName, str(traceback.format_exc()))
     return
         
 #check if stream is live and add points after PayoutInterval
@@ -287,7 +288,7 @@ def sendDiscordInfo():
         return
 
     msg1 = ",  ".join(": ".join((Parent.GetDisplayName(k),"+{}".format(v) if v > 0 else str(v))) for k,v in sorted(scoreSummary.iteritems(), key=lambda (k,v): (-v,k)))
-    msg = "Heutige Punkteverteilung:\n{}".format(msg1);
+    msg = "Today's Score:\n{}".format(msg1);
     Log(msg)
     
     if settings.AnnounceDiscord:
@@ -308,6 +309,7 @@ def removePoints(user, amount):
 #else save info for later
 def Log(msg):
     msg = "{} {}".format(strftime("%H:%M", localtime()), msg)
+    Parent.Log(ScriptName, msg)
     if not logActive:
         logData.append(msg)
         return

@@ -28,11 +28,11 @@
 		"wsevent": "",
 		"group": "Main Settings"
 	},
-	"Donate": {
+	"OpenWebsite": {
 		"type": "button",
-		"label": "Donate",
-		"tooltip": "Opens a donation link.",
-		"function": "donate",
+		"label": "Open Website",
+		"tooltip": "Opens the github page.",
+		"function": "openWebsite",
 		"wsevent": "",
 		"group": "Main Settings"
 	},
@@ -99,14 +99,14 @@
 	},
     "AnnouncePayout": {
         "type": "checkbox",
-        "label": "Announce The Point Payout In Chat",
+        "label": "Announce Payout In Chat",
         "value": true,
         "tooltip": "Sends a chatmessage about the payout.",
         "group": "Message Settings"
     },
     "AnnounceDiscord": {
         "type": "checkbox",
-        "label": "Send Score Summary To Discord On Close",
+        "label": "Send Score Summary To Discord",
         "value": true,
         "tooltip": "Announces the score summary in discord after the script gets closed.",
         "group": "Message Settings"
