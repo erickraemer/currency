@@ -15,7 +15,7 @@ control which action is requiered to receive points for watching your stream. Fo
 write in chat at least once within 15 minutes before payout. This way bots are kept out from earning points on your channel.
 
 ## How To Install
-[Please follow this tutorial](https://github.com/StreamlabsSupport/Streamlabs-Chatbot/wiki/Prepare-&-Import-Scripts)
+[Please follow this tutorial](https://github.com/StreamlabsSupport/Streamlabs-Chatbot/wiki/Prepare-&-Import-Scripts).
 After that you can adjust all settings by clicking on the script name in the chatbots script section.
 
 ## The Decay System
