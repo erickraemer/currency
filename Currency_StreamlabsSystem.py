@@ -31,7 +31,7 @@ def Init():
     global settings
     global stopEvent
     global thread
-    global sessionPresence
+    global scoreSummary
     global logActive
     global logData
     global decayLog
@@ -40,14 +40,13 @@ def Init():
     logData = list()
 
     stopEvent = threading.Event()
-    
     settings = ScriptSettings()
-    
-    sessionPresence = dict()
+    scoreSummary = dict()
     
     thread = threading.Thread(target=exceptionCatcher)
     #thread.setDaemon(True)
-    decayLog = FileManager("decay_log.json")
+    if settings.Valid and settings.DecayActive:
+        decayLog = FileManager("decaylog.json")
     return
 
 #stop thread and calculate point decay
@@ -56,7 +55,7 @@ def Unload():
         stopEvent.set()
         thread.join()
         
-    if not sessionPresence:
+    if not scoreSummary:
         return
         
     sendDiscordInfo()     
@@ -114,36 +113,48 @@ class ScriptSettings():
             self.DecayViewerAmount = int(filter(str.isdigit, self.DecayViewerAmount))
             self.DecayFixed = self.DecayFixed == "Fixed"
             self.Valid = True
+            Parent.Log(ScriptName, str(self.DecayViewerAmount))
         except:
             pass
-        self.sPFileName = "session_presence.txt"
         self.PollRate = 30
         return
 
 class FileManager():
     def __init__(self, filename):
-        self.data_ = dict()
+        self.data = dict()
         self.__path = getPath(filename)
         self.load()
+        return
+        
+    def __getitem__(self, key):
+        return self.data[key]
+        
+    def __setitem__(self, key, value):
+        self.data[key] = value
         return
         
     def load(self):
         if os.path.isfile(self.__path):
             f = open(self.__path, "r")
-            self.data_ = json.loads(f.read())
+            temp = json.loads(f.read())
+            for k,v in temp.iteritems():
+                self.data[k] = timedelta(minutes=v)
             f.close()
             return
        
         dotv = Parent.GetTopCurrency(settings.DecayViewerAmount)
         for k in dotv.keys():
-            dotv[k] = 0
-        self.data_ = dotv
+            dotv[k] = timedelta()
+        self.data = dotv
         self.save()
         return
         
     def save(self):
         f = open(self.__path, "w")
-        f.write(json.dumps(self.data_))
+        temp = dict()
+        for k,v in self.data.iteritems():
+            temp[k] = int(v.total_seconds() / 60)
+        f.write(json.dumps(temp))
         f.close()
         return        
 
@@ -157,9 +168,6 @@ def exceptionCatcher():
         
 #check if stream is live and add points after PayoutInterval
 def run():
-    global msgOnline
-    msgOnline = False
-    
     #wait until stream is live or script is stopped
     while not Parent.IsLive():
         if stopEvent.wait(settings.PollRate):
@@ -197,95 +205,105 @@ def setupLogging():
 def addPoints():
     #add points for viewers
     viewer = getActiveUsers()
+    if not viewer:
+        Log("No viewers to give points to!")  
+        return
     
     for v in viewer:
-        #Todo: create one function for log and add points
-        Parent.AddPoints(v, settings.PayoutAmount)
-        sessionPresence[v] = sessionPresence.get(v, 0) + settings.PayoutAmount
+        addPoints(v, settings.PayoutAmount)
     
     updateDecayLog(viewer)
-   
-    msg = ", ".join("~{}".format(Parent.GetDisplayName(v)) for v in viewer)
-    if msg:
-        msg = "+{} {} for: {}".format(settings.PayoutAmount, Parent.GetCurrencyName(), msg)
-        if settings.AnnouncePayout:
-            Parent.SendStreamMessage("/me {}".format(msg))
-        Log(msg.replace('~', ''))
-    else:
-        Log("No viewers to give points to!")  
+    payoutNotification(viewer)
+    return
+    
+def payoutNotification(viewer):
+    msg = "+{} {} for: {}".format(settings.PayoutAmount,
+        Parent.GetCurrencyName(),
+        ", ".join(Parent.GetDisplayName(v) for v in viewer))
+    Log(msg)
+    
+    if settings.AnnouncePayout:
+        Parent.SendStreamMessage("/me {}".format(msg.replace(", ", ", ~")))
     return
     
 def getActiveUsers():
     viewer = set()
     
     for user in Parent.GetActiveUsers():
-        if Parent.GetPoints(user) > 0:
-            viewer.add(user)
-        else:
-            #check if user is following
+        if Parent.GetPoints(user) <= 0:
             link = "https://api.crunchprank.net/twitch/followed/{}/{}".format(Parent.GetChannelName(), user)
             result = Parent.GetRequest(link, {})
-            if (json.loads(result)["status"] == 200 and
-            json.loads(result)["response"] != "Follow not found"):
-                viewer.add(user)
+            if (json.loads(result)["status"] != 200 or
+            json.loads(result)["response"] == "Follow not found"):
+                continue
+        
+        viewer.add(user)
     return viewer
 
 def updateDecayLog(viewer):
     if not settings.DecayActive:
         return
 
-     #check if local top 10 is up to date
+    #update local decaylog
     sotv = set(Parent.GetTopCurrency(settings.DecayViewerAmount).keys())
-    dlKeys = set(decayLog.data_.keys())
+    dlKeys = set(decayLog.data.keys())
     difA = dlKeys.difference(sotv)
     if difA:
         difB = sotv.difference(dlKeys)
-        decayLog.data_.update(dict.fromkeys(difB, 0))
+        decayLog.data.update(dict.fromkeys(difB, 0))
         for e in difA:
-            del decayLog.data_[e]
+            del decayLog[e]
             
-    #reset decay for top 10 viewers
-    for k in decayLog.data_.keys():
+    #reset or increase decay for viewers
+    for k in decayLog.data.keys():
         if k in viewer:
-            decayLog.data_[k] = 0
+            decayLog[k] = 0
         else:
-            #Use timedelta for decaylog
-            if (timedelta(minutes=decayLog.data_[user]) > settings.DecayCooldown and
-            decayLog.data_[k] % 60 + settings.PayoutInterval >= 60):
-                calculateDecay(k)
+            checkDecay(k)
+            decayLog[k] += settings.PayoutInterval
             
-            decayLog.data_[k] += settings.PayoutInterval
     decayLog.save()
     return
 
-def calculateDecay(user):
+def checkDecay(user):
+    if (decayLog[user] < settings.DecayCooldown or
+        decayLog[user] % settings.DecayInterval + settings.PayoutInterval < settings.DecayInterval):
+        return
+
     decay = settings.DecayAmount
     if not settings.DecayFixed:
-        percent = decayLog.data_[user]/settings.DecayInterval
+        percent = (decayLog[user] - settings.DecayCooldown) / settings.DecayInterval
         decay = int((percent/100.0) * Parent.GetPoints(user))
         
-    Parent.RemovePoints(user, decay)
-    sessionPresence[user] = sessionPresence.get(user, 0) - decay
+    removePoints(user, decay)
     Log("{}% decay (-{} {}) for: {}".format(percent, decay, Parent.GetCurrencyName(), Parent.GetDisplayName(user)))
-    Log("{}: last seen {} hours ago.".format(Parent.GetDisplayName(user), decayLog.data_[user] * (settings.PayoutInterval / 60) / 60))
+    Log("{}: last seen {} hours ago.".format(Parent.GetDisplayName(user), decayLog[user].total_seconds() / 60))
     return
 
 #sends a discord information at the end of the stream
 def sendDiscordInfo():
-    if not settings.AnnounceDiscord:
-        return
-    
-    msg1 = ",  ".join(": ".join((Parent.GetDisplayName(k),"+{}".format(v) if v > 0 else str(v))) for k,v in sorted(sessionPresence.iteritems(), key=lambda (k,v): (-v,k)))
+    msg1 = ",  ".join(": ".join((Parent.GetDisplayName(k),"+{}".format(v) if v > 0 else str(v))) for k,v in sorted(scoreSummary.iteritems(), key=lambda (k,v): (-v,k)))
     msg = "Heutige Punkteverteilung:\n{}".format(msg1);
-    Parent.SendDiscordMessage(msg)
     Log(msg)
+    
+    if settings.AnnounceDiscord:
+        Parent.SendDiscordMessage(msg)
+    return
+    
+def addPoints(user, amount):
+    Parent.AddPoints(v, settings.PayoutAmount)
+    scoreSummary[user] = scoreSummary.get(user, 0) + settings.PayoutAmount
+    return
+    
+def removePoints(user, amount):
+    Parent.RemovePoints(user, amount)
+    scoreSummary[user] = scoreSummary.get(user, 0) - amount
     return
     
 #write log to file after stream goes live
 #else save info for later
 def Log(msg):
     msg = "{} {}".format(strftime("%H:%M", localtime()), msg)
-    #Parent.Log(ScriptName, msg)
     if not logActive:
         logData.append(msg)
         return

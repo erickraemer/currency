@@ -52,8 +52,7 @@
 		  "Top 5",
 		  "Top 10",
 		  "Top 25",
-		  "Top 50",
-		  "Top 100",
+		  "Top 50"
 		],
 		"group": "Decay Settings"
 	},
