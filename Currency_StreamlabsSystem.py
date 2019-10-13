@@ -18,10 +18,6 @@ Version = "1.0.0.0"
 #returns script folder path + filename
 def getPath(filename):
     return os.path.join(os.path.dirname(__file__), filename)
-
-def openReadme():
-    os.startfile(getPath("readme.txt"))
-    return
     
 def openWebsite():
     os.system("start \"\" {}".format(Website))

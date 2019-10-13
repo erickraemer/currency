@@ -20,14 +20,6 @@
 		"tooltip": "The amount of points a viewer receives on every payout interval.",
 		"group": "Main Settings"	
 	},
-	"OpenReadme": {
-		"type": "button",
-		"label": "Open Readme",
-		"tooltip": "Opens the readme file.",
-		"function": "openReadme",
-		"wsevent": "",
-		"group": "Main Settings"
-	},
 	"OpenWebsite": {
 		"type": "button",
 		"label": "Open Website",
