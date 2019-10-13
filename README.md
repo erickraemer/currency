@@ -43,13 +43,13 @@ to work at the end of your stream. The reason for this is because the chatbot wi
 probably close the chatbot beforehand. Also for this to work you need to setup a discord bot in the streamlabs chatbot settings menu. 
 
 ## Logging
-Currency automaticly creates a logfile "currency.log" in its script folder after your stream goes live.
+Currency automatically creates a logfile "currency.log" in its script folder after your stream goes live.
 
 ## Planned Features & Problems
 - Track points for subs, donations and hosts
    - What happens if someone subs while the stream is offline.
    - Rewards amounts cant be requested from the chatbot.
    
-- Detect close and send score summary automaticly to discord
+- Detect close and send score summary automatically to discord
    - Bot takes way to long to notice
    - Bot does not run 24/7
