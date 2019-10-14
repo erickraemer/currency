@@ -234,8 +234,6 @@ def getActiveUsers():
     viewer = set()
     
     for user in Parent.GetActiveUsers():
-        if user == Parent.GetChannelName():
-            continue
         if Parent.GetPoints(user) <= 0:
             link = "https://api.crunchprank.net/twitch/followed/{}/{}".format(Parent.GetChannelName(), user)
             result = Parent.GetRequest(link, {})
@@ -244,6 +242,7 @@ def getActiveUsers():
                 continue
         
         viewer.add(user)
+    viewer.discard(Parent.GetChannelName())
     return viewer
 
 def updateDecayLog(viewer):
@@ -268,10 +267,8 @@ def checkDecay(user):
         decayLog[user] % settings.DecayInterval + settings.PayoutInterval < settings.DecayInterval):
         return
 
-    decay = settings.DecayAmount
-    if not settings.DecayFixed:
-        percent = (decayLog[user] - settings.DecayCooldown) / settings.DecayInterval
-        decay = int((percent / 100.0) * Parent.GetPoints(user))
+    percent = settings.DecayAmount if settings.DecayFixed else (decayLog[user] - settings.DecayCooldown) / settings.DecayInterval
+    decay = int((percent / 100.0) * Parent.GetPoints(user))
         
     removePoints(user, decay)
     Log("{}% decay (-{} {}) for: {}".format(percent, decay, Parent.GetCurrencyName(), Parent.GetDisplayName(user)))
