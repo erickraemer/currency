@@ -14,6 +14,8 @@ With point rewards for donations, subs or hosts on the streamlabs website and th
 control which action is requiered to receive points for watching your stream. For a viewer to receive points he needs to
 write in chat at least once within 15 minutes before payout. This way bots are kept out from earning points on your channel.
 
+<p align="center"><img src="https://user-images.githubusercontent.com/56401733/66820995-f8f18000-ef41-11e9-9b40-b2406b643529.png" /></p>
+
 ## How To Install
 [Please follow this tutorial](https://github.com/StreamlabsSupport/Streamlabs-Chatbot/wiki/Prepare-&-Import-Scripts).
 After that you can adjust all settings by clicking on the script name in the chatbots script section.
