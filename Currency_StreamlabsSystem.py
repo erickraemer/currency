@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os, sys, threading, json, codecs, logging, traceback, time
+import os, sys, threading, json, codecs, traceback, time
 from time import localtime, strftime
 from datetime import timedelta
 #NOTE: 
@@ -30,11 +30,13 @@ def Init():
     global scoreSummary
     global logActive
     global logData
+    global logPath
     global decayLog
     global thread
     
     logActive = False
     logData = list()
+    logPath = getPath("currency.log")
     thread = None
     stopEvent = threading.Event()
     settings = ScriptSettings()
@@ -138,11 +140,10 @@ class DecayTracker():
         
     def load(self):
         if os.path.isfile(self.__path):
-            f = open(self.__path, "r")
-            temp = json.loads(f.read())
-            for k,v in temp.iteritems():
-                self.data[k] = timedelta(minutes=v)
-            f.close()
+            with open(self.__path, "r") as f:
+                temp = json.loads(f.read())
+                for k,v in temp.iteritems():
+                    self.data[k] = timedelta(minutes=v)
             self.update()
             return
         
@@ -154,12 +155,11 @@ class DecayTracker():
         return
         
     def save(self):
-        f = open(self.__path, "w")
         temp = dict()
-        for k,v in self.data.iteritems():
-            temp[k] = int(v.total_seconds() / 60)
-        f.write(json.dumps(temp))
-        f.close()
+        with open(self.__path, "w") as f:
+            for k,v in self.data.iteritems():
+                temp[k] = int(v.total_seconds() / 60)
+            f.write(json.dumps(temp))
         return        
 
 #catches exceptions from the thread and prints them to the log console
@@ -193,15 +193,11 @@ def setupLogging():
     global logData
         
     logActive = True
-    logging.basicConfig(filename=getPath("currency.log"),
-        filemode="w",
-        level=logging.INFO,
-        format="%(message)s")
-    
-    logging.info("Date: {}".format(strftime("%d %B %Y", localtime())))
-    
-    for s in logData:
-        logging.info(s)
+    with open(logPath, "w") as f:
+        f.write("Date: {}\n".format(strftime("%d %B %Y", localtime())))
+        for s in logData:
+            f.write("{}\n".format(s))
+            
     logData[:] = []
     return
 
@@ -307,7 +303,8 @@ def Log(msg):
         logData.append(msg)
         return
 
-    logging.info(msg)
+    with open(logPath, "a") as f:
+        f.write("{}\n".format(msg))
     return
     
 def Error(msg):
