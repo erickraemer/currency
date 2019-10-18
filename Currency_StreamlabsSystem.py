@@ -13,7 +13,7 @@ ScriptName = "[Currency]"
 Website = "https://github.com/erickraemer/currency"
 Description = "An enhancement script for the streamlabs loyality system which rewards your viewers with points for watching your stream."
 Creator = "Eric Krämer"
-Version = "1.0.0.1"
+Version = "1.0.0.2"
 
 #returns script folder path + filename
 def getPath(filename):
@@ -230,15 +230,16 @@ def getActiveUsers():
     viewer = set()
     
     for user in Parent.GetActiveUsers():
+        if Parent.GetDisplayName(user) == Parent.GetChannelName():
+            continue
         if Parent.GetPoints(user) <= 0:
             link = "https://api.crunchprank.net/twitch/followed/{}/{}".format(Parent.GetChannelName(), user)
             result = Parent.GetRequest(link, {})
             if (json.loads(result)["status"] != 200 or
-            json.loads(result)["response"] == "Follow not found"):
+            "-" not in json.loads(result)["response"]):
                 continue
         
         viewer.add(user)
-    viewer.discard(Parent.GetChannelName())
     return viewer
 
 def updateDecayLog(viewer):
