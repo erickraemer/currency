@@ -13,7 +13,7 @@ ScriptName = "[Currency]"
 Website = "https://github.com/erickraemer/currency"
 Description = "An enhancement script for the streamlabs loyality system which rewards your viewers with points for watching your stream."
 Creator = "Eric Krämer"
-Version = "1.0.0.2"
+Version = "1.0.0.3"
 
 #returns script folder path + filename
 def getPath(filename):
@@ -167,7 +167,7 @@ def exceptionCatcher():
     try:
         run()
     except BaseException as ex:
-        Log(ScriptName, str(traceback.format_exc()))
+        Log(str(traceback.format_exc()))
     return
         
 #check if stream is live and add points after PayoutInterval
@@ -261,7 +261,7 @@ def updateDecayLog(viewer):
 
 def checkDecay(user):
     if (decayLog[user] < settings.DecayCooldown or
-        decayLog[user] % settings.DecayInterval + settings.PayoutInterval < settings.DecayInterval):
+        timedelta(decayLog[user].total_seconds() % settings.DecayInterval.total_seconds()) + settings.PayoutInterval < settings.DecayInterval):
         return
 
     percent = settings.DecayAmount if settings.DecayFixed else (decayLog[user] - settings.DecayCooldown) / settings.DecayInterval
