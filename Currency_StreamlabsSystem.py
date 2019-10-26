@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-import os, sys, threading, json, codecs, traceback, time
+import sys
+sys.platform = "win32"
+import os, threading, json, codecs, traceback, time
 from time import localtime, strftime
 from datetime import timedelta
 #NOTE: 
@@ -254,23 +256,30 @@ def updateDecayLog(viewer):
             decayLog[k] = timedelta()
         else:
             checkDecay(k)
-            decayLog[k] += settings.PayoutInterval
             
     decayLog.save()
     return
 
 def checkDecay(user):
-    if (decayLog[user] < settings.DecayCooldown or
-        timedelta(decayLog[user].total_seconds() % settings.DecayInterval.total_seconds()) + settings.PayoutInterval < settings.DecayInterval):
+    cooldownReached = decayLog[user] + settings.PayoutInterval >= settings.DecayCooldown
+    decayIntervalReached = (decayLog[user] < settings.DecayCooldown or timedelta(seconds=(decayLog[user] - settings.DecayCooldown).total_seconds() % settings.DecayInterval.total_seconds()) + settings.PayoutInterval >= settings.DecayInterval)
+    
+    decayLog[user] += settings.PayoutInterval
+    if not (cooldownReached and decayIntervalReached):
         return
 
-    percent = settings.DecayAmount if settings.DecayFixed else (decayLog[user] - settings.DecayCooldown) / settings.DecayInterval
+    percent = getDecayAmount(user)
     decay = int((percent / 100.0) * Parent.GetPoints(user))
         
     removePoints(user, decay)
-    Log("{}% decay (-{} {}) for: {}".format(percent, decay, Parent.GetCurrencyName(), Parent.GetDisplayName(user)))
-    Log("{}: last seen {} hours ago.".format(Parent.GetDisplayName(user), decayLog[user].total_seconds() / 60))
+    Log("{}% decay (-{} {}) for: {}, last seen {} hours ago".format(percent, decay, Parent.GetCurrencyName(), Parent.GetDisplayName(user), int(decayLog[user].total_seconds() / 3600)))
     return
+
+def getDecayAmount(user):
+    if settings.DecayFixed:
+        return settings.DecayAmount 
+    
+    return int((decayLog[user] - settings.DecayCooldown + settings.DecayInterval).total_seconds() / settings.DecayInterval.total_seconds())
 
 #sends a discord information at the end of the stream
 def sendDiscordInfo():
