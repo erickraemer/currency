@@ -15,7 +15,7 @@ ScriptName = "[Currency]"
 Website = "https://github.com/erickraemer/currency"
 Description = "An enhancement script for the streamlabs loyality system which rewards your viewers with points for watching your stream."
 Creator = "Eric Krämer"
-Version = "1.0.0.3"
+Version = "1.0.0.4"
 
 #returns script folder path + filename
 def getPath(filename):
