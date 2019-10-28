@@ -2,6 +2,7 @@
 import sys
 sys.platform = "win32"
 import os, threading, json, codecs, traceback, time
+from subprocess import call
 from time import localtime, strftime
 from datetime import timedelta
 #NOTE: 
@@ -35,6 +36,8 @@ def Init():
     global logPath
     global decayLog
     global thread
+    global discordPreCommand
+    global discordPostCommand
     
     logActive = False
     logData = list()
@@ -43,6 +46,8 @@ def Init():
     stopEvent = threading.Event()
     settings = ScriptSettings()
     scoreSummary = dict()
+    discordPreCommand = "py \"{}\"".format(os.getcwd() + getPath("DiscordNotifier.py")[1:])
+    discordPostCommand = "\"{}\" \"{}\"".format(settings.DiscordChannel, settings.DiscordToken)
     
     if settings.Valid and settings.DecayActive:
         decayLog = DecayTracker("decaylog.json")
@@ -54,7 +59,6 @@ def Unload():
         stopEvent.set()
         thread.join()
 
-    sendDiscordInfo()     
     return 
 
 def Tick():
@@ -216,6 +220,7 @@ def payoutPoints():
     
     updateDecayLog(viewer)
     payoutNotification(viewer)
+    sendDiscordInfo() 
     return
     
 def payoutNotification(viewer):
@@ -283,15 +288,14 @@ def getDecayAmount(user):
 
 #sends a discord information at the end of the stream
 def sendDiscordInfo():
-    if not scoreSummary:
+    if not(scoreSummary and
+        settings.AnnounceDiscord):
         return
 
-    msg1 = ",  ".join(": ".join((Parent.GetDisplayName(k),"+{}".format(v) if v > 0 else str(v))) for k,v in sorted(scoreSummary.iteritems(), key=lambda (k,v): (-v,k)))
-    msg = "Today's Score:\n{}".format(msg1);
-    Log(msg)
-    
-    if settings.AnnounceDiscord:
-        Parent.SendDiscordMessage(msg)
+    prefix = "Today's Score:"
+    msg = ",  ".join(": ".join((Parent.GetDisplayName(k),"+{}".format(v) if v > 0 else str(v))) for k,v in sorted(scoreSummary.iteritems(), key=lambda (k,v): (-v,k)))
+    command = "{} \"{}\" \"{}\" {}".format(discordPreCommand, msg, prefix, discordPostCommand)
+    child = call(command, shell=True)
     return
     
 def addPoints(user, amount):

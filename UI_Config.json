@@ -100,7 +100,21 @@
         "type": "checkbox",
         "label": "Send Score Summary To Discord",
         "value": true,
-        "tooltip": "Announces the score summary in discord after the script gets closed.",
+        "tooltip": "Announces the score summary in discord.",
         "group": "Message Settings"
-    }
+    },
+	"DiscordToken": {
+		"type": "textbox",
+		"value": "" ,
+		"label": "Discord Bot Oauth Token",
+		"tooltip": "OAuth token of your bot.",
+		"group": "Message Settings"	
+	},
+	"DiscordChannel": {
+		"type": "textbox",
+		"value": "" ,
+		"label": "Discord Bot Channel",
+		"tooltip": "The channel in which your bot should be posting the messages.",
+		"group": "Message Settings"	
+	}
 }
