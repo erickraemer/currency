@@ -2,6 +2,7 @@
 import discord
 import sys
 import datetime
+import traceback
 
 client = discord.Client()
 
@@ -26,14 +27,17 @@ async def on_ready():
     if not channel:
         return 1
 
-    msg = await find_last_message(channel)
-    if msg:
-        await msg.edit(content=message)
-    else:
-        await channel.send(content=message)
-
-    await client.logout()
-    await client.close()
+    try:
+        msg = await find_last_message(channel)
+        if msg:
+            await msg.edit(content=message)
+        else:
+            await channel.send(content=message)
+    except:
+        print(traceback.format_exc(), file=sys.stderr)
+    finally:
+        await client.logout()
+        await client.close()
     return
 
 

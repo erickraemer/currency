@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 sys.platform = "win32"
-import os, threading, json, codecs, traceback, time
-from subprocess import call
+import os, threading, json, codecs, traceback, time, subprocess
 from time import localtime, strftime
 from datetime import timedelta
 #NOTE: 
@@ -16,7 +15,7 @@ ScriptName = "[Currency]"
 Website = "https://github.com/erickraemer/currency"
 Description = "An enhancement script for the streamlabs loyality system which rewards your viewers with points for watching your stream."
 Creator = "Eric Krämer"
-Version = "1.0.0.4"
+Version = "1.0.0.5"
 
 #returns script folder path + filename
 def getPath(filename):
@@ -295,7 +294,14 @@ def sendDiscordInfo():
     prefix = "Today's Score:"
     msg = ",  ".join(": ".join((Parent.GetDisplayName(k),"+{}".format(v) if v > 0 else str(v))) for k,v in sorted(scoreSummary.iteritems(), key=lambda (k,v): (-v,k)))
     command = "{} \"{}\" \"{}\" {}".format(discordPreCommand, msg, prefix, discordPostCommand)
-    child = call(command, shell=True)
+    
+    sp = subprocess.Popen(command, stderr=subprocess.PIPE, shell=True)
+    err = sp.communicate()[1]
+    
+    if err:
+        Log("Sending score summary to Discord failed with:\n{}".format(err))
+        settings.AnnounceDiscord = False
+
     return
     
 def addPoints(user, amount):
