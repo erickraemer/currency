@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 sys.platform = "win32"
-import os, threading, json, codecs, traceback, time, subprocess
+import os, threading, json, codecs, traceback, time, subprocess, base64, re
 from time import localtime, strftime
 from datetime import timedelta
 #NOTE: 
@@ -24,7 +24,19 @@ def getPath(filename):
 def openWebsite():
     os.system("start \"\" {}".format(Website))
     return
+    
+def toJson(object):
+    return json.dumps(object).replace(",", ",\r\n ").replace("{", "{\r\n  ").replace("}", "\r\n}")
 
+def readJson(path):
+    with codecs.open(path, encoding="utf-8-sig", mode="r") as f:
+        return json.load(f)
+
+def writeJson(path, jsonData):
+    with codecs.open(path, encoding="utf-8-sig", mode="w") as f:
+        f.write(jsonData)
+    return
+    
 #set variables
 def Init():
     global settings
@@ -36,8 +48,7 @@ def Init():
     global decayLog
     global thread
     global discordPreCommand
-    global discordPostCommand
-    
+   
     logActive = False
     logData = list()
     logPath = getPath("currency.log")
@@ -46,7 +57,6 @@ def Init():
     settings = ScriptSettings()
     scoreSummary = dict()
     discordPreCommand = "py \"{}\"".format(os.getcwd() + getPath("DiscordNotifier.py")[1:])
-    discordPostCommand = "\"{}\" \"{}\"".format(settings.DiscordChannel, settings.DiscordToken)
     
     if settings.Valid and settings.DecayActive:
         decayLog = DecayTracker("decaylog.json")
@@ -57,7 +67,6 @@ def Unload():
     if thread and thread.isAlive():
         stopEvent.set()
         thread.join()
-
     return 
 
 def Tick():
@@ -83,30 +92,46 @@ def ScriptToggled(state):
         thread.join()
     return
     
-def Reloadsettings(jsonData):
-    settings.Reload(jsonData)
+def ReloadSettings(jsonData):
+    settings.reload(jsonData)
     return
 
 #contains user settings
 class ScriptSettings():
+    __jsonPath = getPath("settings.json")
+    __jsPath = getPath("settings.js")
 
     def __init__(self):
-        self.__load()
-
-    def reload(self, jsonData):
-        self.__load()
-    
-    def __load(self):
         self.Valid = False
         try:
-            #try loading settings
-            file = getPath("settings.json")
-            with codecs.open(file, encoding="utf-8-sig", mode="r") as f:
-                self.__dict__ = json.load(f, encoding="utf-8")
+            self.__dict__ = readJson(__jsonPath)
         except:
             return
+        self.__adjustValues()
+        return
+
+    def reload(self, jsonData):
+        self.Valid = False
+        self.__dict__ = json.loads(jsonData)
+        self.__adjustValues()
+        return
+    
+    def __checksum(self):
+        if not re.search("[^*]", self.DiscordToken):
+            return
             
-        #set time format
+        self.__dict__["Checksum"] = base64.encodestring(self.DiscordToken)
+        self.__dict__["DiscordToken"] = 20 * '*'
+        s = toJson(self.__dict__)
+        writeJson(__jsonPath, s)
+        writeJson(__jsPath, "var settings = {};".format(s))
+        return
+
+    def __adjustValues(self):
+        global discordPostCommand
+        
+        self.__checksum()
+        discordPostCommand = "\"{}\" \"{}\"".format(self.DiscordChannel, base64.decodestring(self.Checksum))
         self.PayoutAmount = int(self.PayoutAmount)
         self.PayoutInterval = timedelta(minutes=self.PayoutInterval)
         self.DecayCooldown = timedelta(hours=self.DecayCooldown)
@@ -116,7 +141,7 @@ class ScriptSettings():
         self.Valid = True
         self.PollRate = 30
         return
-
+    
 class DecayTracker():
     def __init__(self, filename):
         self.data = dict()
@@ -145,10 +170,9 @@ class DecayTracker():
         
     def load(self):
         if os.path.isfile(self.__path):
-            with open(self.__path, "r") as f:
-                temp = json.loads(f.read())
-                for k,v in temp.iteritems():
-                    self.data[k] = timedelta(minutes=v)
+            temp = readJson(self.__path)
+            for k,v in temp.iteritems():
+                self.data[k] = timedelta(minutes=v)
             self.update()
             return
         
@@ -161,10 +185,9 @@ class DecayTracker():
         
     def save(self):
         temp = dict()
-        with open(self.__path, "w") as f:
-            for k,v in self.data.iteritems():
-                temp[k] = int(v.total_seconds() / 60)
-            f.write(json.dumps(temp))
+        for k,v in self.data.iteritems():
+            temp[k] = int(v.total_seconds() / 60)
+        writeJson(self.__path, toJson(temp))
         return        
 
 #catches exceptions from the thread and prints them to the log console
