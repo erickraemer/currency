@@ -26,14 +26,14 @@ def openWebsite():
     return
     
 def toJson(object):
-    return json.dumps(object).replace(",", ",\r\n ").replace("{", "{\r\n  ").replace("}", "\r\n}")
+    return json.dumps(object, sort_keys=True, indent=2)
 
-def readJson(path):
-    with codecs.open(path, encoding="utf-8-sig", mode="r") as f:
-        return json.load(f)
+def readJson(path, enc):
+    with codecs.open(path, encoding=enc, mode="r") as f:
+        return json.load(f, encoding="utf-8")
 
-def writeJson(path, jsonData):
-    with codecs.open(path, encoding="utf-8-sig", mode="w") as f:
+def writeJson(path, jsonData, enc):
+    with codecs.open(path, encoding=enc, mode="w") as f:
         f.write(jsonData)
     return
     
@@ -58,7 +58,7 @@ def Init():
     scoreSummary = dict()
     discordPreCommand = "py \"{}\"".format(os.getcwd() + getPath("DiscordNotifier.py")[1:])
     
-    if settings.Valid and settings.DecayActive:
+    if settings.valid() and settings.DecayActive:
         decayLog = DecayTracker("decaylog.json")
     return
 
@@ -79,7 +79,7 @@ def Execute(Data):
 def ScriptToggled(state):
     global thread
     
-    if not settings.Valid:
+    if not settings.valid():
         Error("Settings could not be loaded, did you hit the \"Save Settings\" button?")
         return
 
@@ -102,16 +102,14 @@ class ScriptSettings():
     __jsPath = getPath("settings.js")
 
     def __init__(self):
-        self.Valid = False
         try:
-            self.__dict__ = readJson(__jsonPath)
+            self.__dict__ = readJson(ScriptSettings.__jsonPath, "utf-8-sig")
         except:
             return
         self.__adjustValues()
         return
 
     def reload(self, jsonData):
-        self.Valid = False
         self.__dict__ = json.loads(jsonData)
         self.__adjustValues()
         return
@@ -120,11 +118,11 @@ class ScriptSettings():
         if not re.search("[^*]", self.DiscordToken):
             return
             
-        self.__dict__["Checksum"] = base64.encodestring(self.DiscordToken)
-        self.__dict__["DiscordToken"] = 20 * '*'
+        self.Checksum = base64.encodestring(self.DiscordToken)
+        self.DiscordToken = 20 * '*' 
         s = toJson(self.__dict__)
-        writeJson(__jsonPath, s)
-        writeJson(__jsPath, "var settings = {};".format(s))
+        writeJson(ScriptSettings.__jsonPath, s, "utf-8-sig")
+        writeJson(ScriptSettings.__jsPath, "var settings = {};".format(s), "utf-8-sig")
         return
 
     def __adjustValues(self):
@@ -138,9 +136,14 @@ class ScriptSettings():
         self.DecayInterval = timedelta(hours=self.DecayInterval)
         self.DecayViewerAmount = int(filter(str.isdigit, self.DecayViewerAmount))
         self.DecayFixed = self.DecayFixed == "Fixed"
-        self.Valid = True
         self.PollRate = 30
+        
+        #indicates that settings are correctly loaded 
+        self.flag = True
         return
+        
+    def valid(self):
+        return "flag" in self.__dict__.keys()
     
 class DecayTracker():
     def __init__(self, filename):
@@ -170,7 +173,7 @@ class DecayTracker():
         
     def load(self):
         if os.path.isfile(self.__path):
-            temp = readJson(self.__path)
+            temp = readJson(self.__path, "utf-8")
             for k,v in temp.iteritems():
                 self.data[k] = timedelta(minutes=v)
             self.update()
@@ -187,7 +190,7 @@ class DecayTracker():
         temp = dict()
         for k,v in self.data.iteritems():
             temp[k] = int(v.total_seconds() / 60)
-        writeJson(self.__path, toJson(temp))
+        writeJson(self.__path, toJson(temp), "utf-8")
         return        
 
 #catches exceptions from the thread and prints them to the log console
