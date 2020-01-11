@@ -56,7 +56,7 @@ def Init():
     stopEvent = threading.Event()
     settings = ScriptSettings()
     scoreSummary = dict()
-    discordPreCommand = "py \"{}\"".format(os.getcwd() + getPath("DiscordNotifier.py")[1:])
+    discordPreCommand = "python \"{}\"".format(os.getcwd() + getPath("DiscordNotifier.py")[1:])
     
     if settings.valid() and settings.DecayActive:
         decayLog = DecayTracker("decaylog.json")
@@ -234,7 +234,6 @@ def setupLogging():
 
 #add points for every active viewer and check session presence
 def payoutPoints():
-    #add points for viewers
     viewer = getActiveUsers()
     if not viewer:
         Log("No viewers to give points to!")  
@@ -318,7 +317,7 @@ def sendDiscordInfo():
         return
 
     prefix = "Today's Score:"
-    msg = ",  ".join(": ".join((Parent.GetDisplayName(k),"+{}".format(v) if v > 0 else str(v))) for k,v in sorted(scoreSummary.iteritems(), key=lambda (k,v): (-v,k)))
+    msg = ",".join(":".join((k,str(v))) for k,v in scoreSummary.iteritems())
     command = "{} \"{}\" \"{}\" {}".format(discordPreCommand, msg, prefix, discordPostCommand)
     
     sp = subprocess.Popen(command, stderr=subprocess.PIPE, shell=True)
@@ -327,7 +326,10 @@ def sendDiscordInfo():
     if err:
         Log("Sending score summary to Discord failed with:\n{}".format(err))
         settings.AnnounceDiscord = False
-
+        
+    #reset score summary
+    global scoreSummary
+    scoreSummary = dict()
     return
     
 def addPoints(user, amount):

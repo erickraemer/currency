@@ -1,8 +1,10 @@
-#!python3
+#! python3
+from datetime import datetime, timezone, date
+from operator import itemgetter
 import discord
 import sys
-import datetime
 import traceback
+import re
 
 client = discord.Client()
 
@@ -12,7 +14,7 @@ def main():
         return 1
 
     global message, prefix, channel_name
-    message = "{}\n{}".format(sys.argv[2], sys.argv[1])
+    message = sys.argv[1]
     prefix = sys.argv[2]
     channel_name = sys.argv[3]
     token = sys.argv[4]
@@ -29,10 +31,13 @@ async def on_ready():
 
     try:
         msg = await find_last_message(channel)
+        update = string_to_dict(message)
         if msg:
-            await msg.edit(content=message)
+            score = string_to_dict(msg.content[len(prefix) + 1:])
+            update_score(score, update)
+            await msg.edit(content="{}\n{}".format(prefix, dict_to_string(score)))
         else:
-            await channel.send(content=message)
+            await channel.send(content="{}\n{}".format(prefix, dict_to_string(update)))
     except:
         print(traceback.format_exc(), file=sys.stderr)
     finally:
@@ -50,7 +55,7 @@ def find_channel():
 
 def is_last_message(msg):
     return (msg.author == client.user and
-            msg.created_at.date() == datetime.date.today() and
+            utc_to_local(msg.created_at).date() == date.today() and
             msg.content.startswith(prefix))
 
 
@@ -59,6 +64,35 @@ async def find_last_message(channel):
         if is_last_message(msg):
             return msg
     return None
+
+
+def utc_to_local(utc_dt):
+    return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
+
+
+def string_to_dict(s: str) -> dict:
+    s = re.sub('[^a-zA-Z0-9_:,-]', '', s).strip()
+    lop = s.split(',')
+    d = dict()
+    for p in lop:
+        pair = p.split(':')
+        d[pair.pop()] = int(pair.pop())
+    return d
+
+
+def dict_to_string(d: dict) -> str:
+    return ",  ".join(": ".join((k, "+{}".format(v) if v > 0 else str(v))) for k, v in
+                      sorted(d.items(), key=itemgetter(1), reverse=True))
+
+
+def update_score(d1: dict, d2: dict):
+    for k, v in d2.items():
+        i = d1.get(k, 0) + v
+        if i == 0:
+            d1.pop(k, None)
+        else:
+            d1[k] = i
+    return
 
 
 main()
