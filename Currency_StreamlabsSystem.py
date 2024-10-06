@@ -12,9 +12,9 @@ from datetime import timedelta
 #   [Required] Script Information
 #---------------------------
 ScriptName = "[Currency]"
-Website = "https://github.com/purpurgruen/currency"
+Website = "https://github.com/erickraemer/currency"
 Description = "An enhancement script for the streamlabs loyality system which rewards your viewers with points for watching your stream."
-Creator = "Purpurgruen"
+Creator = "Eric Krämer"
 Version = "1.0.0.4"
 
 #returns script folder path + filename
